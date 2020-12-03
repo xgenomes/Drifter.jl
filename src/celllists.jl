@@ -44,36 +44,42 @@ function neighbor(t :: CellList{2}, p :: NTuple{2, Float64})
     offsets = (0,-1,1)
 
     bin_idx = _bin_idx.(p, t.radius)
-
+    (f,closest_p) = (false, (Inf, Inf))
+    sq_d_min = r_sq
     for o_x in offsets, o_y in offsets
         k = bin_idx .+ (o_x, o_y)
         if k ∈ keys(t.cells)
             for n in t.cells[k]
-                if _squared_dist(p,n) <= r_sq
-                    return true, n
+
+                if _squared_dist(p,n) < sq_d_min
+                    f = true
+                    sq_d_min = _squared_dist(p,n)
+                    closest_p = n
                 end
             end
         end
     end
-    return false, (Inf,Inf)
+    return f, closest_p
 end
-
 
 function neighbor(t :: CellList{3}, p :: NTuple{3, Float64})
     r_sq = t.radius*t.radius
     offsets = (0,-1,1)
 
     bin_idx = _bin_idx.(p, t.radius)
-
+    (f,closest_p) = (false, (Inf, Inf, Inf))
+    sq_d_min = r_sq
     for o_x in offsets, o_y in offsets, o_z in offsets
         k = bin_idx .+ (o_x, o_y, o_z)
         if k ∈ keys(t.cells)
             for n in t.cells[k]
-                if _squared_dist(p,n) <= r_sq
-                    return true, n
+                if _squared_dist(p,n) < sq_d_min
+                    f = true
+                    sq_d_min = _squared_dist(p,n)
+                    closest_p = n
                 end
             end
         end
     end
-    return false, (Inf,Inf,Inf)
+    return f, closest_p
 end

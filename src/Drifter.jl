@@ -48,39 +48,41 @@ struct DriftLoss{N}
     lambda :: Float64
 end
 
-#TODO: Find a more elegant way to handle x[1] = 0.0...
-function loss_and_gradient!(g, l :: DriftLoss, x :: Vector{Float64}, :: Val{I}) where {I}
-    fill!(g, 0.0)
+function loss_and_gradient(l :: DriftLoss, x :: Vector{Float64}, :: Val{I}) where {I}
+    g = zeros(length(x))
     r = 0.0
     for (f_i,f_j, d) in l.drift_pairs
         if d.N_matches > 0
-            if f_i != 1
-                est_drift = x[f_j-1] - x[f_i-1]
-                residual = est_drift-d.average_shift[I]
-                r += (d.N_matches/2.0)*residual^2
-                g[f_j-1] += d.N_matches*residual
-                g[f_i-1] -= d.N_matches*residual
-            else
-                est_drift = x[f_j-1] - 0.0
-                residual = est_drift-d.average_shift[I]
-                r += (d.N_matches/2.0)*residual^2
-                g[f_j-1] += d.N_matches*residual
-            end
+            est_drift = x[f_j] - x[f_i]
+            residual = est_drift-d.average_shift[I]
+            r += (d.N_matches/2.0)*residual^2
+            g[f_j] += d.N_matches*residual
+            g[f_i] -= d.N_matches*residual
         end
     end
 
-    # discrete second derivative of drift...
-    #first term...
-    r += (l.lambda/2)*(-2x[1] + x[2])^2
-    g[1] += -2*l.lambda*(-2x[1] + x[2])
-    g[2] += l.lambda*(-2x[1] + x[2])
-    for i in 2:length(x)-1
-        residual = (x[i-1] - 2x[i] + x[i+1])
+    # # discrete second derivative of drift...
+    # for i in 2:length(x)-1
+    #     residual = (x[i-1] - 2x[i] + x[i+1])
+    #     r += (l.lambda/2)*residual^2
+    #     g[i-1] += l.lambda*residual
+    #     g[i] -= 2*l.lambda*residual
+    #     g[i+1] += l.lambda*residual
+    # end
+
+    # discrete first derivative of drift...
+    for i in 1:length(x)-1
+        residual = (x[i] - x[i+1])
         r += (l.lambda/2)*residual^2
-        g[i-1] += l.lambda*residual
-        g[i] -= 2*l.lambda*residual
-        g[i+1] += l.lambda*residual
+        g[i] += l.lambda*residual
+        g[i+1] -= l.lambda*residual
     end
+    r, g
+end
+
+function loss_and_gradient!(g, l, x, v)
+    r,g_t = loss_and_gradient(l,vcat(0.0,x),v)
+    @views g .= g_t[2:end]
     r
 end
 
@@ -123,10 +125,13 @@ where D is the discrete second derivative.
 """
 function drift_estimation(localizations :: Vector{Vector{NTuple{N, Float64}}}, frame_offsets :: Vector{Int64},
      max_dist, max_iters; drift = [ntuple(i->0.0, Val(N)) for _ in 1:length(localizations)], lambda = 0.0, recompute_max_dist = 1E-3) where {N}
+   drift_estimation(localizations, indexpairs(length(localizations), frame_offsets), max_dist, max_iters; drift = drift, lambda = lambda, recompute_max_dist = recompute_max_dist)
+end
+
+function drift_estimation(localizations :: Vector{Vector{NTuple{N, Float64}}}, index_pairs :: Vector{NTuple{2,Int64}}, max_dist, max_iters; drift = [ntuple(i->0.0, Val(N)) for _ in 1:length(localizations)], lambda = 0.0, recompute_max_dist = 1E-3) where {N}
     @assert N == 2 || N == 3
     frames = [Frame(locs, d, CellList(locs, max_dist)) for (locs, d) in zip(localizations, drift)]
-    cache = indexpairs(length(localizations), frame_offsets) |> Map(((i,j),) -> (i,j,compute_ave_offset(frames[i], frames[j]))) |> tcollect
-
+    cache = index_pairs |> Map(((i,j),) -> (i,j,compute_ave_offset(frames[i], frames[j]))) |> tcollect
     old_drift = drift
 
     for i in 1:max_iters
@@ -141,11 +146,15 @@ function drift_estimation(localizations :: Vector{Vector{NTuple{N, Float64}}}, f
 
         # link across frames (~ minimize w.r.t matching)
         cache = cache |> Map(((i,j,v),) -> cached_link(v, i,j,frames, recompute_max_dist, old_drift, drift))  |> tcollect
+        matches = sum(m->m[end].N_matches, cache)
+        @show i, matches
         # minimize loss w.r.t drift
         old_drift = drift
         drift = minimize_wrt_drift(DriftLoss(cache,lambda), drift)
     end
     [[z .- d for z in f] for (f,d) in zip(localizations,drift)], drift
+
+
 end
 
 end
