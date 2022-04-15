@@ -124,12 +124,15 @@ drift ↦ OT(drift, offsets) + λ * ||D*drift||^2
 where D is the discrete second derivative.
 """
 function drift_estimation(localizations :: Vector{Vector{NTuple{N, Float64}}}, frame_offsets :: Vector{Int64},
-     max_dist, max_iters; drift = [ntuple(i->0.0, Val(N)) for _ in 1:length(localizations)], lambda = 0.0, recompute_max_dist = 1E-3) where {N}
+     max_dist, max_iters; drift = nothing, lambda = 0.0, recompute_max_dist = 1E-3) where {N}
    drift_estimation(localizations, indexpairs(length(localizations), frame_offsets), max_dist, max_iters; drift = drift, lambda = lambda, recompute_max_dist = recompute_max_dist)
 end
 
-function drift_estimation(localizations :: Vector{Vector{NTuple{N, Float64}}}, index_pairs :: Vector{NTuple{2,Int64}}, max_dist, max_iters; drift = [ntuple(i->0.0, Val(N)) for _ in 1:length(localizations)], lambda = 0.0, recompute_max_dist = 1E-3) where {N}
+function drift_estimation(localizations :: Vector{Vector{NTuple{N, Float64}}}, index_pairs :: Vector{NTuple{2,Int64}}, max_dist, max_iters; drift = nothing, lambda = 0.0, recompute_max_dist = 1E-3) where {N}
     @assert N == 2 || N == 3
+    if drift === nothing
+        drift = [ntuple(i->0.0, Val(N)) for _ in 1:length(localizations)]
+    end
     frames = [Frame(locs, d, CellList(locs, max_dist)) for (locs, d) in zip(localizations, drift)]
     cache = index_pairs |> Map(((i,j),) -> (i,j,compute_ave_offset(frames[i], frames[j]))) |> tcollect
     old_drift = drift
