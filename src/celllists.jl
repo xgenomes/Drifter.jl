@@ -33,7 +33,7 @@ function Base.push!(t :: CellList{N}, p :: NTuple{N, Float64}) where {N}
     push!(list, p)
 end
 
-function CellList(points :: Vector{NTuple{N, Float64}}, radius :: Float64, maxx :: Int, maxy :: Int) where {N}
+function CellList(points :: Vector{NTuple{N, Float64}}, radius :: Float64, maxx :: Float64, maxy :: Float64) where {N}
     t = CellList{N}(radius, maxx, maxy)
     for p in points
         push!(t, p)
