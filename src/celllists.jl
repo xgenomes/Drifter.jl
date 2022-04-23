@@ -15,7 +15,7 @@ struct CellList{N}
     indexes :: SparseMatrixCSC{Int, Int}
     function CellList{N}(r, maxx, maxy) where {N}
         @assert N == 2 || N == 3
-        new{N}(Vector{NTuple{N, Float64}}[], r, spzeros(Int, _bin_idx(maxx, r), _bin_idx(maxy, r)))
+        new{N}(Vector{NTuple{N, Float64}}[], r, spzeros(Int, _bin_idx(maxx, r) + 1, _bin_idx(maxy, r) + 1))
     end
 end
 
