@@ -41,11 +41,11 @@ function CellList(points :: Vector{NTuple{N, Float64}}, radius :: Float64) where
     t
 end
 
-function haskey(t :: CellList{N}, k :: NTuple{N, Int}) where {N}
+function Base.haskey(t :: CellList{N}, k :: NTuple{N, Int}) where {N}
     getindex(t.indexes, k...) > 0
 end
 
-function getindex(t :: CellList{N}, k :: NTuple{N, Int}) where {N}
+function Base.getindex(t :: CellList{N}, k :: NTuple{N, Int}) where {N}
     t.cells[getindex(t.indexes, k...)]
 end
 
