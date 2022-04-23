@@ -1,5 +1,5 @@
 #### Cell lists. Super simple...
-@inline _bin_idx(x :: Float64, bin_width :: Float64) = ceil(Int64, x/bin_width)
+@inline _bin_idx(x :: Float64, bin_width :: Float64) = ceil(Int64, x/bin_width) + 1
 
 @inline function _squared_dist(p,n)
     r = 0.0
@@ -13,9 +13,9 @@ struct CellList{N}
     cells :: Vector{Vector{NTuple{N, Float64}}}
     radius :: Float64
     indexes :: SparseMatrixCSC{Int, Int}
-    function CellList{N}(r) where {N}
+    function CellList{N}(r, maxx, maxy) where {N}
         @assert N == 2 || N == 3
-        new{N}(Vector{NTuple{N, Float64}}[], r, spzeros(Int, 3000, 3000))
+        new{N}(Vector{NTuple{N, Float64}}[], r, spzeros(Int, _bin_idx(maxx, r), _bin_idx(maxy, r)))
     end
 end
 

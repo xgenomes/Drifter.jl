@@ -134,7 +134,7 @@ function drift_estimation(localizations :: Vector{Vector{NTuple{N, Float64}}}, i
     if drift === nothing
         drift = [ntuple(i->0.0, Val(N)) for _ in 1:length(localizations)]
     end
-    frames = [Frame(locs, d, CellList(locs, max_dist)) for (locs, d) in zip(localizations, drift)]
+    frames = [Frame(locs, d, CellList(locs, max_dist, maximum(getindex.(locs, 1)), maximum(getindex.(locs, 2)))) for (locs, d) in zip(localizations, drift)]
     cache = index_pairs |> Map(((i,j),) -> (i,j,compute_ave_offset(frames[i], frames[j]))) |> tcollect
     old_drift = drift
 
