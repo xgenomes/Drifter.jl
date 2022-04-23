@@ -1,7 +1,7 @@
 name = "Drifter"
 uuid = "1e229871-6983-4c14-a913-6e2cca003bdc"
 authors = ["Nick Boyd <nickboyd@gmail.com>", "Nicholas Bauer <bauer@xgenomes.com>"]
-version = "0.1.11"
+version = "0.1.12"
 
 [deps]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"

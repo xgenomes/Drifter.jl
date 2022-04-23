@@ -1,5 +1,6 @@
 #### Cell lists. Super simple...
-@inline _bin_idx(x :: Float64, bin_width :: Float64) = ceil(Int64, x/bin_width) + 2
+# drift_offset_x is to accomodate negative drift
+@inline _bin_idx(x :: Float64, bin_width :: Float64, drift_offset_x :: Float64) = ceil(Int64, (x + drift_offset_x)/bin_width)
 
 @inline function _squared_dist(p,n)
     r = 0.0
@@ -13,15 +14,15 @@ struct CellList{N}
     cells :: Vector{Vector{NTuple{N, Float64}}}
     radius :: Float64
     indexes :: SparseMatrixCSC{Int, Int}
-    function CellList{N}(r, maxx, maxy) where {N}
+    drift_offset :: Float64
+    function CellList{N}(r, maxx, maxy, drift_offset) where {N}
         @assert N == 2 || N == 3
-        new{N}(Vector{NTuple{N, Float64}}[], r, spzeros(Int, _bin_idx(maxx, r) * 2, _bin_idx(maxy, r) * 2))
-        # honestly not sure why +1 wasn't enough, but x2 should(?) be more than enough, and since it's a sparse array, shouldn't make a size difference
+        new{N}(Vector{NTuple{N, Float64}}[], r, spzeros(Int, _bin_idx(maxx + drift_offset, r, drift_offset), _bin_idx(maxy + drift_offset, r, drift_offset)), drift_offset)
     end
 end
 
 function Base.push!(t :: CellList{N}, p :: NTuple{N, Float64}) where {N}
-    k = _bin_idx.(p, t.radius)
+    k = _bin_idx.(p, t.radius, t.drift_offset)
 
     list = if t.indexes[k[1], k[2]] == 0
         t.indexes[k[1], k[2]] = length(t.cells) + 1
@@ -34,8 +35,8 @@ function Base.push!(t :: CellList{N}, p :: NTuple{N, Float64}) where {N}
     push!(list, p)
 end
 
-function CellList(points :: Vector{NTuple{N, Float64}}, radius :: Float64, maxx :: Float64, maxy :: Float64) where {N}
-    t = CellList{N}(radius, maxx, maxy)
+function CellList(points :: Vector{NTuple{N, Float64}}, radius :: Float64, maxx :: Float64, maxy :: Float64, drift_offset :: Float64) where {N}
+    t = CellList{N}(radius, maxx, maxy, drift_offset)
     for p in points
         push!(t, p)
     end
@@ -55,7 +56,7 @@ function neighbor(t :: CellList{2}, p :: NTuple{2, Float64})
     r_sq = t.radius*t.radius
     offsets = (0,-1,1)
 
-    bin_idx = _bin_idx.(p, t.radius)
+    bin_idx = _bin_idx.(p, t.radius, t.drift_offset)
     (f,closest_p) = (false, (Inf, Inf))
     sq_d_min = r_sq
     for o_x in offsets, o_y in offsets
@@ -77,7 +78,7 @@ function neighbor(t :: CellList{3}, p :: NTuple{3, Float64})
     r_sq = t.radius*t.radius
     offsets = (0,-1,1)
 
-    bin_idx = _bin_idx.(p, t.radius)
+    bin_idx = _bin_idx.(p, t.radius, t.drift_offset)
     (f,closest_p) = (false, (Inf, Inf, Inf))
     sq_d_min = r_sq
     for o_x in offsets, o_y in offsets, o_z in offsets

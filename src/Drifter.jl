@@ -118,6 +118,8 @@ It may be substantially faster to ~warmstart~ the optimization (using the keywor
 `max_dist` is the maximum distance between two localizations in different frames that will be allowed before they are
 considered to be localizations of different objects. Usually 1-3x the localization precision works here (depending on the density of the data).
 
+`drift_offset` is the maximum drift supported. Default of 100.0 should be sufficient but can be trivially increased.
+
 The keywork argument `lambda` is included for regularization - the objective function is something like
 
 drift ↦ OT(drift, offsets) + λ * ||D*drift||^2
@@ -125,18 +127,18 @@ drift ↦ OT(drift, offsets) + λ * ||D*drift||^2
 where D is the discrete second derivative.
 """
 function drift_estimation(localizations :: Vector{Vector{NTuple{N, Float64}}}, frame_offsets :: Vector{Int64},
-     max_dist, max_iters; drift = nothing, lambda = 0.0, recompute_max_dist = 1E-3) where {N}
-   drift_estimation(localizations, indexpairs(length(localizations), frame_offsets), max_dist, max_iters; drift = drift, lambda = lambda, recompute_max_dist = recompute_max_dist)
+     max_dist, max_iters; drift = nothing, lambda = 0.0, recompute_max_dist = 1E-3, drift_offset = 100.0) where {N}
+   drift_estimation(localizations, indexpairs(length(localizations), frame_offsets), max_dist, max_iters; drift, lambda, recompute_max_dist, drift_offset)
 end
 
-function drift_estimation(localizations :: Vector{Vector{NTuple{N, Float64}}}, index_pairs :: Vector{NTuple{2,Int64}}, max_dist, max_iters; drift = nothing, lambda = 0.0, recompute_max_dist = 1E-3) where {N}
+function drift_estimation(localizations :: Vector{Vector{NTuple{N, Float64}}}, index_pairs :: Vector{NTuple{2,Int64}}, max_dist, max_iters; drift = nothing, lambda = 0.0, recompute_max_dist = 1E-3, drift_offset = 100.0) where {N}
     @assert N == 2 || N == 3
     if drift === nothing
         drift = [ntuple(i->0.0, Val(N)) for _ in 1:length(localizations)]
     end
     maxx = maximum(maximum(getindex.(locs, 1)) for locs ∈ localizations)
     maxy = maximum(maximum(getindex.(locs, 2)) for locs ∈ localizations)
-    frames = [Frame(locs, d, CellList(locs, max_dist, maxx, maxy)) for (locs, d) in zip(localizations, drift)]
+    frames = [Frame(locs, d, CellList(locs, max_dist, maxx, maxy, drift_offset)) for (locs, d) in zip(localizations, drift)]
     cache = index_pairs |> Map(((i,j),) -> (i,j,compute_ave_offset(frames[i], frames[j]))) |> tcollect
     old_drift = drift
 
