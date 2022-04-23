@@ -1,5 +1,5 @@
 #### Cell lists. Super simple...
-@inline _bin_idx(x :: Float64, bin_width :: Float64) = ceil(Int64, x/bin_width) + 1
+@inline _bin_idx(x :: Float64, bin_width :: Float64) = ceil(Int64, x/bin_width) + 2
 
 @inline function _squared_dist(p,n)
     r = 0.0
