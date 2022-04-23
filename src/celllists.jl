@@ -16,6 +16,7 @@ struct CellList{N}
     function CellList{N}(r, maxx, maxy) where {N}
         @assert N == 2 || N == 3
         new{N}(Vector{NTuple{N, Float64}}[], r, spzeros(Int, _bin_idx(maxx, r) * 2, _bin_idx(maxy, r) * 2))
+        # honestly not sure why +1 wasn't enough, but x2 should(?) be more than enough, and since it's a sparse array, shouldn't make a size difference
     end
 end
 
