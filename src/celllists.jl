@@ -10,21 +10,24 @@
 end
 
 struct CellList{N}
-    cells :: Dict{NTuple{N, Int64}, Vector{NTuple{N, Float64}}}
+    cells :: Vector{Vector{NTuple{N, Float64}}}
     radius :: Float64
+    indexes :: SparseMatrixCSC{Int, Int}
     function CellList{N}(r) where {N}
         @assert N == 2 || N == 3
-        new{N}(Dict(), r)
+        new{N}(Vector{NTuple{N, Float64}}[], r, spzeros(Int, 3000, 3000))
     end
 end
 
 function Base.push!(t :: CellList{N}, p :: NTuple{N, Float64}) where {N}
     k = _bin_idx.(p, t.radius)
 
-    list = if k ∉ keys(t.cells)
-        t.cells[k] = NTuple{N, Float64}[]
+    list = if t.indexes[k[1], k[2]] == 0
+        t.indexes[k[1], k[2]] = length(t.cells) + 1
+        push!(t.cells, NTuple{N, Float64}[])
+        t.cells[end]
     else
-        t.cells[k]
+        t.cells[t.indexes[k[1], k[2]]]
     end
 
     push!(list, p)
@@ -38,6 +41,14 @@ function CellList(points :: Vector{NTuple{N, Float64}}, radius :: Float64) where
     t
 end
 
+function haskey(t :: CellList{N}, k :: NTuple{N, Int})
+    getindex(t.indexes, k...) > 0
+end
+
+function getindex(t :: CellList{N}, k :: NTuple{N, Int})
+    t.cells[getindex(t.indexes, k...)]
+end
+
 # TODO: Remove duplicate code.
 function neighbor(t :: CellList{2}, p :: NTuple{2, Float64})
     r_sq = t.radius*t.radius
@@ -48,9 +59,8 @@ function neighbor(t :: CellList{2}, p :: NTuple{2, Float64})
     sq_d_min = r_sq
     for o_x in offsets, o_y in offsets
         k = bin_idx .+ (o_x, o_y)
-        if k ∈ keys(t.cells)
-            for n in t.cells[k]
-
+        if haskey(t, k)
+            for n in t[k]
                 if _squared_dist(p,n) < sq_d_min
                     f = true
                     sq_d_min = _squared_dist(p,n)
@@ -71,8 +81,8 @@ function neighbor(t :: CellList{3}, p :: NTuple{3, Float64})
     sq_d_min = r_sq
     for o_x in offsets, o_y in offsets, o_z in offsets
         k = bin_idx .+ (o_x, o_y, o_z)
-        if k ∈ keys(t.cells)
-            for n in t.cells[k]
+        if haskey(t, k)
+            for n in t[k]
                 if _squared_dist(p,n) < sq_d_min
                     f = true
                     sq_d_min = _squared_dist(p,n)

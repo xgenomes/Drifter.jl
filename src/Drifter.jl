@@ -1,6 +1,7 @@
 module Drifter
-using Transducers
 using Optim
+using SparseArrays
+using Transducers
 
 export drift_estimation
 
