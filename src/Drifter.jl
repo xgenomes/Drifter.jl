@@ -105,6 +105,8 @@ end
 
 
 """
+    drift_estimation(localizations :: Vector{Vector{NTuple{N, Float64}}}, frame_offsets :: Vector{Int64}, max_dist, max_iters; drift = nothing, lambda = 0.0, recompute_max_dist = 1E-3, drift_offset = 100.0)
+
 Estimate the drift for the vector of vectors of points in `localizations`
 (each vector of points in `localizations` is the localizations in a single frame).
 
@@ -136,9 +138,13 @@ function drift_estimation(localizations :: Vector{Vector{NTuple{N, Float64}}}, i
     if drift === nothing
         drift = [ntuple(i->0.0, Val(N)) for _ in 1:length(localizations)]
     end
+    
+    # Bin the localizaions in each frame
     maxx = maximum(maximum(getindex.(locs, 1)) for locs ∈ localizations)
     maxy = maximum(maximum(getindex.(locs, 2)) for locs ∈ localizations)
     frames = [Frame(locs, d, CellList(locs, max_dist, maxx, maxy, drift_offset)) for (locs, d) in zip(localizations, drift)]
+
+    # For each of the index pairs, compute an average frame offset by looking at the binned localizations in each
     cache = index_pairs |> Map(((i,j),) -> (i,j,compute_ave_offset(frames[i], frames[j]))) |> tcollect
     old_drift = drift
 
