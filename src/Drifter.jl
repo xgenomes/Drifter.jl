@@ -140,8 +140,8 @@ function drift_estimation(localizations :: Vector{Vector{NTuple{N, Float64}}}, i
     end
     
     # Bin the localizaions in each frame
-    maxx = maximum(maximum(getindex.(locs, 1)) for locs ∈ localizations)
-    maxy = maximum(maximum(getindex.(locs, 2)) for locs ∈ localizations)
+    maxx = maximum(maximum(getindex.(locs, 1), init = 0) for locs ∈ localizations)
+    maxy = maximum(maximum(getindex.(locs, 2), init = 0) for locs ∈ localizations)
     frames = [Frame(locs, d, CellList(locs, max_dist, maxx, maxy, drift_offset)) for (locs, d) in zip(localizations, drift)]
 
     # For each of the index pairs, compute an average frame offset by looking at the binned localizations in each
